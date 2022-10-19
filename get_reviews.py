@@ -282,9 +282,9 @@ def main():
     script_name = os.path.basename(__file__)
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--book_ids_path', type=str)
-    parser.add_argument('--output_directory_path', type=str)
-    parser.add_argument('--browser', type=str, default='chrome', help="choose a browser")
+    parser.add_argument('--book_ids_path', type=str, default='goodreads_books.txt')
+    parser.add_argument('--output_directory', type=str, default='reviews')
+    parser.add_argument('--browser', type=str, default='chrome', help='choose a browser')
     parser.add_argument('--rating_filter', default=None, type=int)
     parser.add_argument('--sort_order', default='default', type=str)
     parser.add_argument(
@@ -292,35 +292,21 @@ def main():
         type=str,
         action="store",
         default="csv",
-        dest="format",
         help="set file output format",
     )
 
     args = parser.parse_args()
 
-    if not args.book_ids_path:
-        parser.error(
-            "\n\nPlease add the --book_ids_path flag and choose a filepath that contains Goodreads book IDs\n"
-        )
-    if not args.output_directory_path:
-        parser.error(
-            "\n\nPlease add the --output_directory_path and choose a directory filepath to output your reviews\n"
-        )
-    if not args.browser:
-        parser.error(
-            "\n\nPlease add the --browser flag and choose a browser: either Firefox or Chrome\n"
-        )
-
     book_ids = [line.strip() for line in open(args.book_ids_path, 'r') if line.strip()]
     books_already_scraped = [
         file_name.replace('_reviews.json', '')
-        for file_name in os.listdir(args.output_directory_path)
+        for file_name in os.listdir(args.output_directory)
         if file_name.endswith('.json')
         and not file_name.startswith('all_reviews')
         and "_reviews" in file_name
     ]
     books_to_scrape = [book_id for book_id in book_ids if book_id not in books_already_scraped]
-    condensed_reviews_path = args.output_directory_path + '/all_reviews'
+    condensed_reviews_path = args.output_directory + '/all_reviews'
 
     # Set up driver
     if args.browser is not None:
@@ -348,31 +334,14 @@ def main():
         try:
 
             print(str(datetime.now()) + ' ' + script_name + ': Scraping ' + book_id + '...')
-            print(
-                str(datetime.now())
-                + ' '
-                + script_name
-                + ': #'
-                + str(i + 1 + len(books_already_scraped))
-                + ' out of '
-                + str(len(book_ids))
-                + ' books'
-            )
+            print(f' #{str(i + 1 + len(books_already_scraped))} out of {str(len(book_ids))} books')
 
             reviews = get_reviews_first_ten_pages(
                 driver, book_id, args.sort_order, rating=args.rating_filter
             )
 
             if reviews:
-                print(
-                    str(datetime.now())
-                    + ' '
-                    + script_name
-                    + ': Scraped ✨'
-                    + str(len(reviews))
-                    + '✨ reviews for '
-                    + book_id
-                )
+                print(f'Scraped ✨ {str(len(reviews))} ✨ reviews for {book_id}')
 
                 if args.rating_filter:
                     filename_rating_suffix = f'_{args.rating_filter}_stars'
@@ -381,7 +350,7 @@ def main():
                 # add the word reviews to file name
                 file_name = book_id + filename_rating_suffix + '_reviews.json'
 
-                json.dump(reviews, open(args.output_directory_path + '/' + file_name, 'w'))
+                json.dump(reviews, open(args.output_directory + '/' + file_name, 'w'))
 
             print('=============================')
 
@@ -390,7 +359,7 @@ def main():
 
     driver.quit()
 
-    reviews = condense_reviews(args.output_directory_path)
+    reviews = condense_reviews(args.output_directory)
     if args.format.lower() == 'json':
         json.dump(reviews, open(f"{condensed_reviews_path}.json", 'w'))
     elif args.format.lower() == 'csv':
@@ -399,12 +368,9 @@ def main():
         review_df.to_csv(f"{condensed_reviews_path}.csv", index=False, encoding='utf-8')
 
     print(
-        str(datetime.now())
-        + ' '
-        + script_name
-        + f':\n\n🎉 Success! All book reviews scraped. 🎉\n\nGoodreads review files have been output to /{args.output_directory_path}\nGoodreads scraping run time = ⏰ '
-        + str(datetime.now() - start_time)
-        + ' ⏰'
+        f':\n\n🎉 Success! All book reviews scraped. 🎉'
+        '\n\nGoodreads review files have been output to /{args.output_directory}'
+        f'\nGoodreads scraping run time = ⏰ str(datetime.now() - start_time) ⏰'
     )
 
 
