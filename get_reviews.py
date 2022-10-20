@@ -3,7 +3,7 @@ from collections import Counter
 from datetime import datetime
 import json
 import os
-import regex as re
+import re
 import time
 import bs4
 from selenium import webdriver
@@ -22,6 +22,7 @@ from selenium.webdriver.common.by import By
 import pandas as pd
 import geckodriver_autoinstaller
 from webdriver_manager.chrome import ChromeDriverManager
+import grlogin
 
 
 RATING_STARS_DICT = {
@@ -161,6 +162,20 @@ def check_for_duplicates(reviews):
     return num_duplicates
 
 
+def get_maximum_reviews(driver, book_id):
+    """
+    Get each star review with 3 different sort order
+    """
+    total_reviews = []
+    for rating in [5, 4, 3, 2, 1]:
+        for sort_order in ['default', 'newest', 'oldest']:
+            print(f'*** Get reviews with rating: {rating} and sort order: {sort_order}')
+            reviews = get_reviews_first_ten_pages(driver, book_id, sort_order, rating)
+            print(f'*** Scraped {len(reviews)} reviews')
+            total_reviews.extend(reviews)
+    return total_reviews
+
+
 def get_reviews_first_ten_pages(driver, book_id, sort_order, rating):
 
     reviews = []
@@ -227,7 +242,7 @@ def get_reviews_first_ten_pages(driver, book_id, sort_order, rating):
 
             except StaleElementReferenceException:
                 print(
-                    'ERROR: StaleElementReferenceException\nRefreshing Goodreads site and skipping problem page {page_counter} '
+                    f'ERROR: StaleElementReferenceException\nRefreshing Goodreads site and skipping problem page {page_counter} '
                 )
                 driver.get(url)
                 time.sleep(3)
@@ -297,6 +312,10 @@ def main():
 
     args = parser.parse_args()
 
+    # create output folder if does not exist
+    if not os.path.exists(args.output_directory):
+        os.mkdir(args.output_directory)
+
     book_ids = [line.strip() for line in open(args.book_ids_path, 'r') if line.strip()]
     books_already_scraped = [
         file_name.replace('_reviews.json', '')
@@ -330,15 +349,15 @@ def main():
     else:
         print('Please select a web browser: Chrome or Firefox')
 
+    grlogin.login(driver)
+
     for i, book_id in enumerate(books_to_scrape):
         try:
 
             print(str(datetime.now()) + ' ' + script_name + ': Scraping ' + book_id + '...')
             print(f' #{str(i + 1 + len(books_already_scraped))} out of {str(len(book_ids))} books')
 
-            reviews = get_reviews_first_ten_pages(
-                driver, book_id, args.sort_order, rating=args.rating_filter
-            )
+            reviews = get_maximum_reviews(driver, book_id)
 
             if reviews:
                 print(f'Scraped ✨ {str(len(reviews))} ✨ reviews for {book_id}')
@@ -369,8 +388,8 @@ def main():
 
     print(
         f':\n\n🎉 Success! All book reviews scraped. 🎉'
-        '\n\nGoodreads review files have been output to /{args.output_directory}'
-        f'\nGoodreads scraping run time = ⏰ str(datetime.now() - start_time) ⏰'
+        f'\n\nGoodreads review files have been output to /{args.output_directory}'
+        f'\nGoodreads scraping run time = ⏰ {str(datetime.now() - start_time)} ⏰'
     )
 
 
