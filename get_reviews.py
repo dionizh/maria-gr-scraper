@@ -22,7 +22,6 @@ from selenium.webdriver.common.by import By
 import pandas as pd
 import geckodriver_autoinstaller
 from webdriver_manager.chrome import ChromeDriverManager
-import grlogin
 
 
 RATING_STARS_DICT = {
@@ -349,7 +348,6 @@ def main():
     else:
         print('Please select a web browser: Chrome or Firefox')
 
-    grlogin.login(driver)
 
     for i, book_id in enumerate(books_to_scrape):
         try:
