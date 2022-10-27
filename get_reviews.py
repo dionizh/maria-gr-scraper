@@ -165,13 +165,15 @@ def get_maximum_reviews(driver, book_id):
     """
     Get each star review with 3 different sort order
     """
+    i = 0
     total_reviews = []
     for rating in [5, 4, 3, 2, 1]:
         for sort_order in ['default', 'newest', 'oldest']:
-            print(f'*** Get reviews with rating: {rating} and sort order: {sort_order}')
+            print(f' {i+1}) Get reviews with rating: {rating} and sort order: {sort_order}')
             reviews = get_reviews_first_ten_pages(driver, book_id, sort_order, rating)
             print(f'*** Scraped {len(reviews)} reviews')
             total_reviews.extend(reviews)
+            i += 1
     return total_reviews
 
 
@@ -348,11 +350,10 @@ def main():
     else:
         print('Please select a web browser: Chrome or Firefox')
 
-
     for i, book_id in enumerate(books_to_scrape):
         try:
 
-            print(str(datetime.now()) + ' ' + script_name + ': Scraping ' + book_id + '...')
+            print(f'\n### Scraping {book_id }...')
             print(f' #{str(i + 1 + len(books_already_scraped))} out of {str(len(book_ids))} books')
 
             reviews = get_maximum_reviews(driver, book_id)
@@ -371,8 +372,10 @@ def main():
 
             print('=============================')
 
-        except HTTPError:
-            pass
+        except Exception as e:
+            print(e)
+            print(f'ERROR scraping book: {book_id}. Skipping..')
+            continue
 
     driver.quit()
 
